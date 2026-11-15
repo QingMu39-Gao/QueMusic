@@ -149,3 +149,15 @@
 - 修复Linux tar打包部分环境无法运行
 
 
+
+## [Unreleased]
+
+### 新增
+- 侧栏新增「我的」页（`pages/MyPage.qml`）：登录后直接浏览账号在平台侧的「我的歌单」与「我喜欢的音乐」，
+  点歌单滑出曲目列表可播放 / 收藏 / 看歌单信息。数据走已有的账号类 action
+  （`getUserPlaylists` / `getUserFavoriteSongs`），此前只有接口层、QML 里没有入口。
+  只读：本地收藏仍写本地库，不会同步回平台账号。
+
+### 变更
+- 页面下标调整：搜索页 5 → 6，为「我的」让出侧栏入口（`main.qml` / `layout/LeftSideBar.qml` / `layout/PlayerControl.qml`）
+- `Options` 新增注入点 `openSettings`（`main.qml` 提供），页面可打开设置窗口而不用反查宿主

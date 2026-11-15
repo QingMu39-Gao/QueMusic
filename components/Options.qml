@@ -23,6 +23,7 @@ QtObject {
     property NumberAnimation openMaxLyric
     property NumberAnimation settingOutAnime
     property QTextField mainSearchInput
+    property var openSettings          // main.qml 注入：打开设置窗口（账号页的「去登录」用）
 
     // main状态
     property int exitIndex: 0          // 要求主界面切到的页

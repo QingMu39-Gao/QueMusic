@@ -53,7 +53,7 @@ Rectangle {
         MusicApi.searchSongsResults.clear();
         Options.mainSearchInput.text = name;
         MusicApi.nowIndex = 0;
-        mainContent.contentIndexed(5);
+        mainContent.contentIndexed(6);
         MusicApi.searchSongs(name, MusicApi.nowIndex, 1, 20);
         Options.exitIndex = 1;
     }

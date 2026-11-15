@@ -32,6 +32,8 @@ Window {
         Options.settingOutAnime = settingOutAnime
         Options.mainSearchInput = mainSearchInput
         Options.musicpic = picWidget
+        // 账号页「去登录」等入口：宿主提供打开设置的方式，页面不去碰 settingsView
+        Options.openSettings = function() { settingsView.active = true; }
         windowAgent.setup(window);
         windowAgent.setTitleBar(titleBar);
         // dark-mode / extra-margins / title-bar-height 是 Windows 专有属性
@@ -101,7 +103,7 @@ Window {
     function doSearch(text: string): void {
         Options.searchText = text;
         MusicApi.searchSongsResults.clear();
-        mainContent.contentIndexed(5);
+        mainContent.contentIndexed(6);
         Config.searchList = [text].concat(Config.searchList.filter(value => value !== text));
         MusicApi.searchSongs(text, MusicApi.nowIndex, 1, 20);
         Options.reSearch();
@@ -440,8 +442,8 @@ Window {
             color: Theme.secondaryColor
             property int pageHeight: height - 60
 
-            // 页面顺序 = 侧边栏导航下标：首页 0 / 分类 1 / 收藏 2 / 本地 3 / 下载 4 / 搜索 5
-            property list<Component> pageItem: [homePage, playlistPage, favouritePage, filePage, downloadPage, searchPage]
+            // 页面顺序 = 侧边栏导航下标：首页 0 / 分类 1 / 收藏 2 / 本地 3 / 下载 4 / 我的 5 / 搜索 6
+            property list<Component> pageItem: [homePage, playlistPage, favouritePage, filePage, downloadPage, myPage, searchPage]
             property int pageIndex: 0
 
             function contentIndexed(choice: int): void {
@@ -493,6 +495,7 @@ Window {
             Component { id: favouritePage; FavouritePage {} }
             Component { id: filePage; FilePage {} }
             Component { id: downloadPage; DownloadPage {} }
+            Component { id: myPage; MyPage {} }
             Component { id: searchPage; SearchPage {} }
         }
 

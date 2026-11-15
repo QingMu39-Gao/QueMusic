@@ -1,0 +1,91 @@
+name: Build Windows portable (MinGW)
+
+# 一键出一个「解压即用」的 Windows 便携包：
+#   aqt 装 Qt 6.10.3（mingw）→ CMake/Ninja 编译 → windeployqt 部署 Qt 运行库
+#   → 连同 CMake 拷过来的 FFmpeg DLL 打成 zip → 作为 artifact 上传。
+#
+# 和 build-windows.yml 的区别：那个只产 QueMusic.exe（不含 Qt DLL，单文件跑不起来）；
+# 这个产可直接运行的目录。上游正式安装包是本地 windeployqt + Inno Setup 做的，
+# 见 packaging/windows/。
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ['feat/**', 'fix/**', 'build/**']
+    paths:
+      - 'pages/**'
+      - 'components/**'
+      - 'layout/**'
+      - 'centers/**'
+      - 'lyricsui/**'
+      - 'shaders/**'
+      - 'api/**'
+      - 'cpp/**'
+      - 'widgets/**'
+      - 'main.qml'
+      - 'main.cpp'
+      - 'CMakeLists.txt'
+      - 'CMakePresets.json'
+      - '.github/workflows/build-windows-portable.yml'
+
+jobs:
+  build-windows-portable:
+    runs-on: windows-latest
+    timeout-minutes: 90
+
+    steps:
+      - name: Checkout with submodules
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Qt 6.10.3 (aqtinstall)
+        shell: pwsh
+        run: |
+          pip install aqtinstall
+          aqt install-qt windows desktop 6.10.3 win64_mingw -O "D:/Qt" -m qtmultimedia qtshadertools qt5compat
+          aqt install-tool windows desktop tools_mingw1310 -O "D:/Qt"
+          aqt install-tool windows desktop tools_ninja -O "D:/Qt"
+          echo "D:/Qt/6.10.3/mingw_64/bin" | Out-File -Append $env:GITHUB_PATH
+          echo "D:/Qt/Tools/mingw1310_64/bin" | Out-File -Append $env:GITHUB_PATH
+          echo "D:/Qt/Tools/Ninja" | Out-File -Append $env:GITHUB_PATH
+
+      - name: Configure (CMake)
+        shell: pwsh
+        run: |
+          cmake -B build -G Ninja `
+            -DCMAKE_BUILD_TYPE=Release `
+            -DCMAKE_PREFIX_PATH="D:/Qt/6.10.3/mingw_64"
+
+      - name: Build
+        shell: pwsh
+        run: cmake --build build --parallel
+
+      # --qmldir 指仓库根：QML 已编译进 qrc，windeployqt 靠源码扫出要带的 QML 模块
+      # --compiler-runtime 带上 libgcc / libstdc++ / libwinpthread（MinGW 构建必需）
+      - name: Deploy Qt runtime (windeployqt)
+        shell: pwsh
+        run: |
+          & "D:/Qt/6.10.3/mingw_64/bin/windeployqt.exe" `
+            --release --no-opengl-sw --no-translations --compiler-runtime `
+            --qmldir "${{ github.workspace }}" `
+            build/bin/QueMusic.exe
+          if ($LASTEXITCODE -ne 0) { throw "windeployqt failed: $LASTEXITCODE" }
+
+      - name: List deployed files
+        shell: pwsh
+        run: Get-ChildItem build/bin | Sort-Object Name | Select-Object Name, Length | Format-Table -AutoSize
+
+      - name: Package portable zip
+        shell: pwsh
+        run: |
+          if (-not (Test-Path build/bin/QueMusic.exe)) { throw "构建产物缺失：build/bin/QueMusic.exe" }
+          Compress-Archive -Path build/bin/* -DestinationPath QueMusic-windows-portable.zip -Force
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: QueMusic-windows-portable
+          path: QueMusic-windows-portable.zip
+          if-no-files-found: error
+          retention-days: 14

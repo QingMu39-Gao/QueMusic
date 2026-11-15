@@ -33,7 +33,7 @@ Rectangle {
             }
         }
         function onExit(): void {
-            if(sidebar.mainCont.pageIndex === 5 && Options.exitIndex <= 1 ) {
+            if(sidebar.mainCont.pageIndex === 6 && Options.exitIndex <= 1 ) {
                 sidebar.mainCont.contentIndexed(sidebar.choiceIndex)
                 MusicApi.searchSongsResults.clear()
             }
@@ -185,6 +185,7 @@ Rectangle {
         ListElement { display: "收藏"; iconChar: "\uf0c1" }
         ListElement { display: "本地"; iconChar: "\uf0f5" }
         ListElement { display: "下载"; iconChar: "\uf00f" }
+        ListElement { display: "我的"; iconChar: "\uf055" }
     }
 
     Repeater {

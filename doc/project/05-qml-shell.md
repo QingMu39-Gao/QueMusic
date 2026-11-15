@@ -148,14 +148,14 @@ Window {                 // 不是 ApplicationWindow
 
 页面切换是**两段式**，都在 `layout/` 内完成，`main.qml` 不直接切页：
 
-1. **侧栏 → 页面下标**：`LeftSideBar` 的 `navModel`（5 项，`layout/LeftSideBar.qml:177-184`）→ delegate `MouseArea.onClicked` 调
+1. **侧栏 → 页面下标**：`LeftSideBar` 的 `navModel`（6 项，`layout/LeftSideBar.qml:181-188`）→ delegate `MouseArea.onClicked` 调
    `sidebar.indexed(index)`（选择条动画 + 首次拉数据）**和** `sidebar.mainCont.contentIndexed(index)`（真正切页）。
-2. **`MainContent` 持有 6 个异步 `Loader` 与 `pages` 列表**：`property list<Item> pages: [homePage, playlistPage, favouritePage, filePage, downloadPage, searchPage]`，
+2. **`MainContent` 持有 7 个异步 `Loader` 与 `pages` 列表**：`property list<Item> pages: [homePage, playlistPage, favouritePage, filePage, downloadPage, myPage, searchPage]`，
    `contentIndexed(choice)` 做「旧的 `visible=false; active=false` → 新的 `active=true` → `pageIndex=choice`」；
    每个 Loader `onLoaded` 回调 `mainContent.finishedLoaderPage(n)` 触发 `pageAnine`（`ParallelAnimation`：`opacity 0→1` + `shiftY 180→0`，320ms）。
-3. **搜索页是唯一没有侧栏入口的页面**（下标 5），由 `main.qml:121`、`layout/PlayerControl.qml:63` 调 `mainContent.contentIndexed(5)` 进入。
+3. **搜索页是唯一没有侧栏入口的页面**（下标 6），由 `main.qml:106`、`layout/PlayerControl.qml:56` 调 `mainContent.contentIndexed(6)` 进入。
 
-### 5.3.2 整数 → 页面 QML 映射（**权威**，源自 `layout/MainContent.qml:14-15`）
+### 5.3.2 整数 → 页面 QML 映射（**权威**，源自 `main.qml:446,494-499`）
 
 | 下标 | 页面 QML | Loader `id` | `active` 初值 | 对应侧栏项 | 备注 |
 |---|---|---|---|---|---|
@@ -164,9 +164,10 @@ Window {                 // 不是 ApplicationWindow
 | 2 | `pages/FavouritePage.qml` | `favouritePage` | `false` | 收藏 | — |
 | 3 | `pages/FilePage.qml` | `filePage` | `false` | 本地 | 内含 WebDAV 子页（见 §5.8） |
 | 4 | `pages/DownloadPage.qml` | `downloadPage` | `false` | 下载 | — |
-| 5 | `pages/SearchPage.qml` | `searchPage` | `false` | **无** | 由标题栏搜索 / 播放条右键搜索进入；Loader 额外标了 `asynchronous: true` |
+| 5 | `pages/MyPage.qml` | `myPage` | `false` | 我的 | 账号歌单 / 我喜欢的音乐（只读，不回写平台） |
+| 6 | `pages/SearchPage.qml` | `searchPage` | `false` | **无** | 由标题栏搜索 / 播放条右键搜索进入；Loader 额外标了 `asynchronous: true` |
 
-`navModel` 只有 5 项（0-4），因此 `contentIndexed(5)` **不可能**从侧栏触发；`MainContent.qml:12` 的 `pageHeight: height - 60` 与每个 Loader 的 `y: 60` 对应「页头 60px 常驻区」。
+`navModel` 只有 6 项（0-5），因此 `contentIndexed(6)` **不可能**从侧栏触发；`MainContent.qml:12` 的 `pageHeight: height - 60` 与每个 Loader 的 `y: 60` 对应「页头 60px 常驻区」。
 侧栏选中态是 `sidebar.choiceIndex`，与 `mainCont.pageIndex` **是两个独立变量** —— 离开搜索页时靠 `LeftSideBar` 的 `onExit` 把 `choiceIndex` 写回。
 
 ### 5.3.3 懒加载标志（`components/Options.qml:31-32`）
@@ -200,7 +201,7 @@ Window {                 // 不是 ApplicationWindow
 ```qml
 Connections { target: Options
     function onExit(): void {
-        if(sidebar.mainCont.pageIndex === 5 && Options.exitIndex <= 1) {
+        if(sidebar.mainCont.pageIndex === 6 && Options.exitIndex <= 1) {
             sidebar.mainCont.contentIndexed(sidebar.choiceIndex)   // 从搜索页回到侧栏上次选中的页
             MusicApi.searchSongsResults.clear()
         }
@@ -572,11 +573,12 @@ Item {                       // 不是 Page/Dialog；由 main.qml 的 Loader 承
 | `pages/SearchPage.qml` | 245 | 搜索结果四页签：歌曲 / 歌单 / 专辑 / 歌词 | `MusicApi.searchSongsResults`、`MusicApi.playlistSong`、`Options.searchText`、`MusicApi.songSource` | `QPages pageList:[searchSong,searchLists,searchAlbum,searchLyrics]` / `QBlurTapBar` / `QDrop` / `QListView` / `QLoadSign` / `PlayListWindow`(winIndex 2) | 1（切源）、2（专辑详情） |
 | `pages/PlaylistPage.qml` | 690 | 分类/歌单详情：新歌、分类歌单、榜单、歌手、专辑 | `MusicApi.newSongs` / `musicPlaylists` / `toplistList` / `allPlaylistMenu` / `singerList` / `playlistSong`；`MusicApi.songFilter` | `QMenu filterMenu`（全部/仅免费/仅 VIP）/ `QPages:[musicsPage,musicMenuPage,cloud,album]` / `QGridView` / `Album`(内联 id `album`) / `PlayListWindow`(winIndex 2 ×2) | 2 |
 | `pages/FavouritePage.qml` | 486 | 收藏：歌曲 / 歌单 / 歌手 / 播放历史；排序与多选 | `FavoriteSongs`、`FavoritePlaylists`、`FavoriteArtists`（未确认是否使用）、`MusicApi.playlistSong`、`Playback` 历史 | `QSortModel songSort/listSort` + `QMenu sortMenu`(7 种排序) / `QPages:[songsLoader,listsLoader,singer,historyLoader]` / `PlayListWindow`(winIndex 1) | 1 |
+| `pages/MyPage.qml` | 320 | 「我的」：账号在平台侧的歌单 / 我喜欢的音乐；平台登录态判定、切页懒加载、去登录 | `MusicApi.userPlaylists` / `userFavoriteSongs` / `playlistSong`、`AccountManager.*LoggedIn`、`MusicApi.getUserPlaylists/getUserFavoriteSongs/getPlaylistSongs` | `QPages:[playlistPage,favoritePage]` / `QBlurTapBar` / `QListView`(×2) / `PlayListWindow`(winIndex 1) | 1 |
 | `pages/FilePage.qml` | 1985 | 本地音乐：我的文件夹 / 本地文件夹 / WebDAV 三子页；导入、扫描、删歌、选择模式、元数据与歌词编辑 | `MyFolders`、`LocalFolders`、`Songs`(+`Songs.searchResults`)、`LocalMusicScanner`、`MusicApi.readLocalMetadataAsync/readLocalAudioInfo/readLocalLyricsText/readLocalCoverHint/writeLocalMetadata`；`FolderListModel`(Qt.labs) 管本地目录 | `QBlurTapBar` / `QPages pageList:[myFile,localFile,webDav]` / `WebDavPage`(id `webDav`, 292) / `AnimatorWindow`(winIndex 1 ×2) / `QSortModel` / `QMenu` | 1 |
 | `pages/DownloadPage.qml` | 388 | 下载管理：正在下载 / 已下载两页签；任务暂停/删除/重试、打开目录 | `MusicApi.downloader`（`DownloadManager`：`taskCount/hasActiveTasks/effectiveDownloadDir/removeTask/retryTask/completedCount`）、`DownloadedMusicModel`（`downloadDir/reload()`） | `DownloadedMusicModel` / `QBlurTapBar` / `QPages downloadChildPage` / `QButton`（文件夹中显示） | — |
 | `pages/WebDavPage.qml` | 496 | WebDAV 分页（**不是顶层导航页**，嵌在 `FilePage` 第 3 个子页）：服务器列表 + 目录浏览 + 增删改服务器 | `WebDavModel`(id `browser`)：`openServer/at()`；`WebDav`：`servers/authHeader/userOf/addServer/updateServer/removeServer/rememberSidecars/sidecarsOf`；`Playback.playItem(..., source: Playback.kSourceWebDav)` | `QPages` / `QOptionDialog serverDialog` / `QInput`(fieldName/fieldUrl/fieldUser/fieldPass) / `QButton` / `QLocalView` | — |
 
-> `pages/WebDavPage.qml` 无侧栏入口、无 `MainContent` Loader；由 `pages/FilePage.qml:292` 直接实例化。文档若按「7 个导航页」理解会漏掉它，按「6 个导航页 + 1 个内嵌页」理解才对。
+> `pages/WebDavPage.qml` 无侧栏入口、无 `MainContent` Loader；由 `pages/FilePage.qml:292` 直接实例化。文档若按「8 个导航页」理解会漏掉它，按「7 个导航页 + 1 个内嵌页」理解才对。
 > `centers/` 目录在 `README.md:392` 有提及，但**当前工作区不存在**该目录 → 相关描述已过时「未确认」。
 
 ---
@@ -678,9 +680,9 @@ Item {                       // 不是 Page/Dialog；由 main.qml 的 Loader 承
 | 18 | **`Esc` 的返回协议：「先 `Options.exit()`，再 `exitIndex -= 1`」**，子窗口在 `onExit` 里按 `exitIndex <= winIndex` 自分关闭 | `main.qml:151-163`、`AnimatorWindow.qml:37-48`、`PlayListWindow.qml:59-70` | 顺序颠倒会导致子窗口不关或多关一层 |
 | 19 | 键位录制期间必须同时 `Config.openShortCut = false` 与 `Options.recordingShortCut = true`，结束后还原 | `SettingsView.qml:1823-1849`、`main.qml:154` | 录制时按键触发播放 |
 | 20 | `main.qml` 里 `ShortCut[flag]` 的拼接与 `SettingsView.globalPropertyName()` **必须同构** | `main.qml:194` vs `SettingsView.qml:1772` | 单功能全局开关失效 |
-| 21 | 搜索歌曲统一入口 `window.doSearch(text)`：清结果 → `contentIndexed(5)` → 写 `Config.searchList`（去重后插到首位）→ `MusicApi.searchSongs` → `Options.reSearch()` → `exitIndex = 1` | `main.qml:118-127`、`layout/PlayerControl.qml:59-66` | — |
+| 21 | 搜索歌曲统一入口 `window.doSearch(text)`：清结果 → `contentIndexed(6)` → 写 `Config.searchList`（去重后插到首位）→ `MusicApi.searchSongs` → `Options.reSearch()` → `exitIndex = 1` | `main.qml:103-111`、`layout/PlayerControl.qml:52-59` | — |
 | 22 | 侧栏点击是**两个调用**：`sidebar.indexed(i)`（动画 + 一次性数据）+ `mainCont.contentIndexed(i)`（切页）；`MainContent.pages` 的**顺序即侧栏下标**，改动必须同步 `LeftSideBar.navModel` | `layout/LeftSideBar.qml:260-264`、`layout/MainContent.qml:14` | 点 A 出 B |
-| 23 | 搜索页（下标 5）**没有侧栏入口**，只能靠 `contentIndexed(5)`；离开靠 `LeftSideBar` 的 `onExit` 回写 | `layout/MainContent.qml:15`、`layout/LeftSideBar.qml:60-68` | 卡在搜索页 |
+| 23 | 搜索页（下标 6）**没有侧栏入口**，只能靠 `contentIndexed(6)`；离开靠 `LeftSideBar` 的 `onExit` 回写 | `main.qml:444-446`、`layout/LeftSideBar.qml:35-40` | 卡在搜索页 |
 | 24 | `SettingsView.navModelSettings` 与 `settingStack.setPages` **顺序必须一一对应**（同为 8 项） | `SettingsView.qml:524-534` vs `629-638` | 点通用出 Debug |
 | 25 | `Options` 是**注入容器**：新增全局对象必须在 `main.qml:21-35` 登记并在 `components/Options.qml` 声明类型属性 | `components/Options.qml:10`（「跨文件共享对象：main.qml 启动时注入」） | 其它文件拿不到 |
 

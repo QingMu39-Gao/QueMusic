@@ -96,7 +96,7 @@
 
 | 第 1–8 部分可能的说法 | 更正 |
 |---|---|
-| 「`Options.exitIndex` 是页面下标」 | 是返回层级计数器；页面下标是 `MainContent.pageIndex`（0–5） |
+| 「`Options.exitIndex` 是页面下标」 | 是返回层级计数器；页面下标是 `MainContent.pageIndex`（0–6） |
 | 「WebDAV 是一个导航页」 | 是 `FilePage` 的第 3 个子页 |
 | 「`DownloadManager` 由 QML 实例化」 | 由 `MusicApiService` 持有，QML 经 `MusicApi.downloader` 访问 |
 | 「`SearchResultModel` 由 QML 使用」 | 由 `FolderModel` / `LocalMusicScanner` 各自 `new`，role 子集不同 |
