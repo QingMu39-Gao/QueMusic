@@ -53,8 +53,12 @@ jobs:
       - name: Configure (CMake)
         shell: pwsh
         run: |
+          # MinGW 13.1 + GNU ld 在 GitHub runner 上处理不了 LTO 产物
+          # （ld.exe: plugin needed to handle lto object → qml_register_types_QueMusic 未定义），
+          # 这里关掉 LTO；本地用 MSVC / clang 工具链时不受影响。
           cmake -B build -G Ninja `
             -DCMAKE_BUILD_TYPE=Release `
+            -DQUEMUSIC_ENABLE_LTO=OFF `
             -DCMAKE_PREFIX_PATH="D:/Qt/6.10.3/mingw_64"
 
       - name: Build
