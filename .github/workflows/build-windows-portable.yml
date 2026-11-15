@@ -80,16 +80,17 @@ jobs:
         shell: pwsh
         run: Get-ChildItem build/bin | Sort-Object Name | Select-Object Name, Length | Format-Table -AutoSize
 
-      - name: Package portable zip
+      - name: Check build output
         shell: pwsh
         run: |
           if (-not (Test-Path build/bin/QueMusic.exe)) { throw "构建产物缺失：build/bin/QueMusic.exe" }
-          Compress-Archive -Path build/bin/* -DestinationPath QueMusic-windows-portable.zip -Force
 
+      # upload-artifact 自己会打 zip：直接传目录，下载下来的 zip 里就是 exe + Qt 运行库，
+      # 不用再手动 Compress-Archive（否则会出现 zip 套 zip）
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: QueMusic-windows-portable
-          path: QueMusic-windows-portable.zip
+          path: build/bin
           if-no-files-found: error
           retention-days: 14
