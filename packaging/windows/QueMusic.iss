@@ -9,7 +9,10 @@
 ; BuildDir 应是已执行 windeployqt 的目录（包含 QueMusic.exe 与 Qt 运行库）。
 
 #define MyAppName "QueMusic"
-#define MyAppVersion "0.6.0"
+; CI 用 /DMyAppVersion=x.y.z 覆盖，本地直接编就用默认值
+#ifndef MyAppVersion
+  #define MyAppVersion "0.6.0"
+#endif
 #define MyAppPublisher "BroNekoX"
 #define MyAppURL "https://quemusic.top"
 #define MyAppExeName "QueMusic.exe"

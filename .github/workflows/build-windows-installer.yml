@@ -1,0 +1,102 @@
+name: Build Windows installer (Inno Setup)
+
+# 出一个正经的安装包（Inno Setup）：
+#   Qt 编译 → windeployqt → ISCC 打包 → QueMusic-<版本>-win64-setup.exe
+# 装完会在「设置 → 应用 → 已安装的应用」里出现（带卸载入口），
+# 开始菜单/桌面快捷方式，Qt 运行库随安装目录一起落地——不用再手动解压 zip。
+#
+# 关于「未知发布者 / SmartScreen」：
+#   * 安装器本身没有代码签名证书，UAC 里仍会显示未知发布者，这只能买证书解决；
+#   * 但装完之后从安装目录启动 QueMusic.exe 不再带 Mark-of-the-Web，
+#     SmartScreen 不会再每次拦——现在每次提醒是因为 exe 是从下载的 zip 里解出来的。
+#   * 安装器提供「仅为我安装」（装到 %LOCALAPPDATA%），选它连 UAC 都不会弹。
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: '安装包版本号（写进「已安装的应用」的版本列）'
+        required: false
+        default: '0.7.2'
+  push:
+    branches: ['feat/**', 'fix/**', 'build/**']
+    paths:
+      - 'pages/**'
+      - 'components/**'
+      - 'layout/**'
+      - 'lyricsui/**'
+      - 'shaders/**'
+      - 'api/**'
+      - 'cpp/**'
+      - 'widgets/**'
+      - 'main.qml'
+      - 'main.cpp'
+      - 'CMakeLists.txt'
+      - 'packaging/windows/QueMusic.iss'
+      - '.github/workflows/build-windows-installer.yml'
+
+jobs:
+  installer:
+    runs-on: windows-latest
+    timeout-minutes: 90
+
+    steps:
+      - name: Checkout with submodules
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Qt 6.10.3 (aqtinstall)
+        shell: pwsh
+        run: |
+          pip install aqtinstall
+          aqt install-qt windows desktop 6.10.3 win64_mingw -O "D:/Qt" -m qtmultimedia qtshadertools qt5compat
+          aqt install-tool windows desktop tools_mingw1310 -O "D:/Qt"
+          aqt install-tool windows desktop tools_ninja -O "D:/Qt"
+          echo "D:/Qt/6.10.3/mingw_64/bin" | Out-File -Append $env:GITHUB_PATH
+          echo "D:/Qt/Tools/mingw1310_64/bin" | Out-File -Append $env:GITHUB_PATH
+          echo "D:/Qt/Tools/Ninja" | Out-File -Append $env:GITHUB_PATH
+
+      - name: Configure (CMake)
+        shell: pwsh
+        run: |
+          cmake -B build -G Ninja `
+            -DCMAKE_BUILD_TYPE=Release `
+            -DQUEMUSIC_ENABLE_LTO=OFF `
+            -DCMAKE_PREFIX_PATH="D:/Qt/6.10.3/mingw_64"
+
+      - name: Build
+        shell: pwsh
+        run: cmake --build build --parallel
+
+      - name: Deploy Qt runtime (windeployqt)
+        shell: pwsh
+        run: |
+          & "D:/Qt/6.10.3/mingw_64/bin/windeployqt.exe" `
+            --release --no-opengl-sw --no-translations --compiler-runtime `
+            --qmldir "${{ github.workspace }}" `
+            build/bin/QueMusic.exe
+          if ($LASTEXITCODE -ne 0) { throw "windeployqt failed: $LASTEXITCODE" }
+
+      - name: Install Inno Setup
+        shell: pwsh
+        run: choco install innosetup --no-progress -y
+
+      - name: Build installer (ISCC)
+        shell: pwsh
+        run: |
+          $iscc = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) { throw "找不到 ISCC：$iscc" }
+          $version = "${{ inputs.version }}" -replace '^\s*$', '0.7.2'
+          Write-Host "==> 版本 $version"
+          & $iscc "/DBuildDir=${{ github.workspace }}\build\bin" "/DMyAppVersion=$version" "packaging\windows\QueMusic.iss"
+          if ($LASTEXITCODE -ne 0) { throw "ISCC 失败：$LASTEXITCODE" }
+          Get-ChildItem dist -Filter *.exe | Select-Object Name, Length | Format-Table -AutoSize
+
+      - name: Upload installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: QueMusic-windows-installer
+          path: dist/*.exe
+          if-no-files-found: error
+          retention-days: 14

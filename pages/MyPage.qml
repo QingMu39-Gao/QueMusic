@@ -110,6 +110,33 @@ Item {
                                   songWindow.songSource);
     }
 
+    // 把某首歌从当前账号歌单里移除（写回平台），成功后再重拉这一页
+    function removeFromPlaylist(item: var): void {
+        if (!item || !item.hash)
+            return;
+        if (!MusicApi.canWritePlaylists(accountSource)) {
+            Options.warned("当前平台不支持修改歌单（只有网易云支持）", 0);
+            return;
+        }
+        MusicApi.playlistRemoveSong(songWindow.id, item.hash, accountSource);
+    }
+
+    function reloadPlaylist(): void {
+        if (!songWindow.id)
+            return;
+        MusicApi.playlistSong.clear();
+        MusicApi.getPlaylistSongs(songWindow.id, 1, pageSize, songWindow.songSource);
+    }
+
+    // 移除成功后刷新当前歌单
+    Connections {
+        target: MusicApi
+        function onActionFinished(action: string, ok: bool, message: string): void {
+            if (ok && action === "playlistRemoveSong")
+                myPage.reloadPlaylist();
+        }
+    }
+
     // 账号平台换了（登录 / 退出 / 切音源）：旧数据作废，重读当前页。
     // accountSource 与 accountReady 常常同一轮一起变，用 0ms 定时器合并成一次。
     Timer {
@@ -315,6 +342,16 @@ Item {
                 bottomMargin: 24
                 onClicked: (index) => MusicApi.playSong(model.get(index), songWindow.songSource)
                 onEnded: myPage.loadSongPage()
+                // 右键菜单：把歌从账号歌单里移除（写回平台）
+                menuModel: ["从歌单移除", "歌曲信息"]
+                menuHandler: true
+                onMenuClicked: (choice, index) => {
+                    const song = MusicApi.playlistSong.get(index)
+                    if (choice === 0)
+                        myPage.removeFromPlaylist(song)
+                    else if (song)
+                        Options.songInfo.show(song, false)
+                }
             }
         }
     }

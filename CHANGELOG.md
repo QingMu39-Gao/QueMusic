@@ -164,3 +164,15 @@
 ### 变更
 - 页面下标调整：搜索页 5 → 6，为「我的」让出侧栏入口（`main.qml` / `layout/LeftSideBar.qml` / `layout/PlayerControl.qml`）
 - `Options` 新增注入点 `openSettings`（`main.qml` 提供），页面可打开设置窗口而不用反查宿主
+
+### 新增（续）
+- 「我的 → 我的歌单」打开的曲目列表支持右键 **从歌单移除**（写回网易云账号歌单，移除后自动重拉当前页）
+- 新增 Windows 安装包工作流 `build-windows-installer.yml`：Inno Setup 出 `QueMusic-<版本>-win64-setup.exe`，
+  装完出现在「已安装的应用」里、带开始菜单/桌面快捷方式和卸载入口；也支持「仅为我安装」（免 UAC）
+- `packaging/windows/QueMusic.iss` 支持 `/DMyAppVersion=` 覆盖版本号
+
+### 说明
+- 托盘：关闭窗口最小化到托盘是正常的（实测进程存活、窗口隐藏）；Windows 11 默认把新应用的托盘图标
+  收进任务栏右下角「^」溢出区，需要在「设置 → 个性化 → 任务栏 → 系统托盘图标」里把 QueMusic 打开
+- 没有代码签名证书，安装器 UAC 仍会显示「未知发布者」；但装完之后启动 exe 不再带下载标记，
+  SmartScreen 的每次拦截会消失
