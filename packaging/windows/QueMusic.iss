@@ -1,4 +1,4 @@
-; QueMusic Inno Setup 脚本
+﻿; QueMusic Inno Setup 脚本
 ;
 ; 基于原有 QueMusicPack.iss 整理，保留原 AppId（升级路径不变），改为相对路径，
 ; 并去掉应用并不支持的 .myp 文件关联。
@@ -47,7 +47,9 @@ WizardStyle=modern
 CloseApplications=yes
 
 [Languages]
-Name: "chinesesimplified"; MessagesFile: "compiler:Languages\Chinese.isl"
+; 中文语言文件随仓库携带（Inno Setup 官方只带英文；这是 jrsoftware 官方翻译库里的 Simplified Chinese）。
+; 以前指向 "compiler:Languages\Chinese.isl"，只有本机手工装过该文件才能编译成功。
+Name: "chinesesimplified"; MessagesFile: "ChineseSimplified.isl"
 Name: "english"; MessagesFile: "compiler:Default.isl"
 
 [Tasks]
