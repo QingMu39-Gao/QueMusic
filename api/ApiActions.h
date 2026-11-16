@@ -56,10 +56,24 @@ inline const QString UserPlaylists = "getUserPlaylists";
 inline const QString UserFavoriteSongs = "getUserFavorites";
 inline const QString FollowedArtists = "getFollowedArtists";
 
+// 账号写入：把歌曲加进 / 移出平台歌单，或新建歌单（同样需要登录态）。
+// 只有实现了写接口的平台才支持（目前是网易云）；其余平台默认返回 unsupported。
+inline const QString PlaylistAddSong = "playlistAddSong";
+inline const QString PlaylistRemoveSong = "playlistRemoveSong";
+inline const QString PlaylistCreate = "playlistCreate";
+
 inline bool isAccountAction(const QString &action)
 {
     return action == UserPlaylists || action == UserFavoriteSongs
-        || action == FollowedArtists;
+        || action == FollowedArtists || action == PlaylistAddSong
+        || action == PlaylistRemoveSong || action == PlaylistCreate;
+}
+
+// 回执型 action：结果是 { ok, message, ... } 而不是列表，交给 QML 弹提示
+inline bool isPlaylistWriteAction(const QString &action)
+{
+    return action == PlaylistAddSong || action == PlaylistRemoveSong
+        || action == PlaylistCreate;
 }
 
 // 返回 { "info": [...] } 的 action。

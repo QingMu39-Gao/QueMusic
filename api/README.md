@@ -81,6 +81,9 @@ emit resultReady(action, data, sourceId);
 | `getUserPlaylists` | page, pageSize | `{info:[playlist]}`（需登录） |
 | `getUserFavorites` | page, pageSize | `{info:[song]}`（需登录） |
 | `getFollowedArtists` | page, pageSize | `{info:[artist]}`（需登录） |
+| `playlistAddSong` | listid, hash | `{ok, message, code}`（写歌单，需登录） |
+| `playlistRemoveSong` | listid, hash | `{ok, message, code}`（写歌单，需登录） |
+| `playlistCreate` | keyword(名称) | `{ok, message, listid}`（写歌单，需登录） |
 
 统一字段见 `ApiCommon.h`；结果会在 `ApiCommon::normalizeItem()` 里补齐
 `title/artist/cover/hash/hashhq/hashsq/duration/album/paytype/playcount`。
@@ -98,6 +101,12 @@ emit resultReady(action, data, sourceId);
 账号类 action（`getUserPlaylists` / `getUserFavorites` / `getFollowedArtists`）
 由 `MusicApiService::sendResolved()` 统一按 `credentials.loggedIn` 拦截，未登录
 直接回空列表并提示，不会进到音源；想支持的平台只 override 对应 `onXxx()`。
+
+写歌单的 `playlistAddSong` / `playlistRemoveSong` / `playlistCreate` 同样走
+`isAccountAction()` 拦截，但结果是 `{ok, message}` 而不是列表：`ApiResultRouter`
+转成 `actionFinished(action, ok, message)` 信号，QML 直接弹提示。目前只有网易云
+实现了这三个（`playlist_track_add` / `playlist_track_delete` / `playlist_create`），
+其它平台返回 unsupported；QML 用 `MusicApi.canWritePlaylists(source)` 决定是否显示入口。
 
 **不需要改**：`ApiResultRouter`、`OnlineListModel`、QML 页面。
 如果新增的是全新 action，才需要：

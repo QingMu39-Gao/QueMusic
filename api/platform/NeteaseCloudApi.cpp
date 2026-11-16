@@ -477,6 +477,37 @@ private:
             info = parseSongList(data.value("songs").toList());
         } else if (action == QLatin1String("getFollowedArtists")) {
             info = parseArtists(data.value("data").toList());
+        } else if (action == QLatin1String("playlistAddSong")
+                   || action == QLatin1String("playlistRemoveSong")) {
+            // 这两个接口只回 { code }，没有列表；直接用 ok/message 给 QML
+            const int code = data.value("code", transportFailed ? -1 : 200).toInt();
+            const bool ok = !transportFailed && code == 200;
+            const bool adding = action == QLatin1String("playlistAddSong");
+            QString text;
+            if (ok)
+                text = adding ? QStringLiteral("已添加到平台歌单")
+                              : QStringLiteral("已从平台歌单移除");
+            else if (code == 401)
+                text = QStringLiteral("网易云登录已失效，请重新登录");
+            else if (code == 502)
+                text = QStringLiteral("歌单不存在或无权修改");
+            else
+                text = QStringLiteral("操作失败（%1）").arg(code);
+            QVariantMap result{{"ok", ok}, {"message", text}, {"code", code}};
+            if (!ok)
+                result.insert("error", code);
+            return result;
+        } else if (action == QLatin1String("playlistCreate")) {
+            const QString id = songId(data.value("id"));
+            const bool ok = !transportFailed && !id.isEmpty();
+            QVariantMap result{
+                {"ok", ok},
+                {"listid", id},
+                {"message", ok ? QStringLiteral("已新建歌单")
+                               : QStringLiteral("新建歌单失败，检查登录状态")}};
+            if (!ok)
+                result.insert("error", -1);
+            return result;
         } else {
             qWarning() << "[NeteaseCloudApi] 未知 action:" << action;
         }
@@ -622,6 +653,24 @@ void NeteaseCloudApi::onFollowedArtists(int page, int pageSize)
 {
     enqueue(ApiAction::FollowedArtists, "artist_sublist",
             {{"limit", pageSize}, {"offset", (page - 1) * pageSize}});
+}
+
+// 歌单写入：都需要登录态，未登录时服务层会先拦掉（isAccountAction）
+void NeteaseCloudApi::onPlaylistAddSong(const QString &listid, const QString &songid)
+{
+    enqueue(ApiAction::PlaylistAddSong, "playlist_track_add",
+            {{"pid", listid}, {"ids", songid}});
+}
+
+void NeteaseCloudApi::onPlaylistRemoveSong(const QString &listid, const QString &songid)
+{
+    enqueue(ApiAction::PlaylistRemoveSong, "playlist_track_delete",
+            {{"pid", listid}, {"ids", songid}});
+}
+
+void NeteaseCloudApi::onPlaylistCreate(const QString &name)
+{
+    enqueue(ApiAction::PlaylistCreate, "playlist_create", {{"name", name}});
 }
 
 void NeteaseCloudApi::onPlaylistSongs(const QString &listid, int page, int pageSize)

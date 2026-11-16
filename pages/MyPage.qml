@@ -173,7 +173,7 @@ Item {
             spacing: 8
             Text {
                 height: 38
-                text: myPage.accountReady ? myPage.accountName + " · 只读" : "未登录"
+                text: myPage.accountReady ? myPage.accountName : "未登录"
                 color: Theme.textColor
                 font.pixelSize: Style.textmain
                 verticalAlignment: Text.AlignVCenter

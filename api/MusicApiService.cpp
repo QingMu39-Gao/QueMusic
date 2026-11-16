@@ -131,6 +131,8 @@ MusicApiService::MusicApiService(QObject *parent)
             &MusicApiService::setCommentsHasMore);
     connect(m_router.get(), &ApiResultRouter::personalFallbackWarning, this,
             [this](const QString &text) { emit warned(text, 2); });
+    connect(m_router.get(), &ApiResultRouter::actionFinished, this,
+            &MusicApiService::actionFinished);
     connect(m_router.get(), &ApiResultRouter::musicInfoReady, m_playback.get(),
             &PlaybackCoordinator::handleMusicInfo);
     connect(m_router.get(), &ApiResultRouter::lyricInfoReady, m_playback.get(),
@@ -527,6 +529,33 @@ void MusicApiService::getUserFavoriteSongs(int page, int pageSize, int source)
 void MusicApiService::getFollowedArtists(int page, int pageSize, int source)
 {
     send(ApiAction::FollowedArtists, {{ApiArg::Page, page}, {ApiArg::PageSize, pageSize}}, source);
+}
+
+void MusicApiService::playlistAddSong(const QString &listid, const QString &songid, int source)
+{
+    send(ApiAction::PlaylistAddSong,
+         {{ApiArg::ListId, listid}, {ApiArg::Hash, songid}}, source);
+}
+
+void MusicApiService::playlistRemoveSong(const QString &listid, const QString &songid,
+                                         int source)
+{
+    send(ApiAction::PlaylistRemoveSong,
+         {{ApiArg::ListId, listid}, {ApiArg::Hash, songid}}, source);
+}
+
+void MusicApiService::playlistCreate(const QString &name, int source)
+{
+    send(ApiAction::PlaylistCreate, {{ApiArg::Keyword, name}}, source);
+}
+
+bool MusicApiService::canWritePlaylists(int source) const
+{
+    // 写歌单目前只有网易云有实现；没登录直接返回 false，调用方据此隐藏入口
+    const int resolved = resolveSource(source);
+    if (resolved != ApiSource::Netease)
+        return false;
+    return m_credentials.value(resolved).loggedIn;
 }
 
 void MusicApiService::getHotPlaylistMenu(int type, int source)

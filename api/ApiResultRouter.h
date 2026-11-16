@@ -53,6 +53,8 @@ public:
 signals:
     void commentsHasMoreChanged(bool hasMore);
     void personalFallbackWarning(const QString &text);
+    // 歌单写入这类「回执型」action：ok/message 交给 QML 弹提示
+    void actionFinished(const QString &action, bool ok, const QString &message);
     void musicInfoReady(const QVariantMap &info, int source);
     void lyricInfoReady(const QVariantMap &info, int source);
     void lyricSearchReady(const QVariant &info, int source, bool failed);

@@ -191,6 +191,14 @@ public:
     Q_INVOKABLE void getUserFavoriteSongs(int page = 1, int pageSize = 20, int source = -1);
     Q_INVOKABLE void getFollowedArtists(int page = 1, int pageSize = 20, int source = -1);
 
+    // 平台歌单写入（需登录；目前只有网易云实现，其它平台 canWritePlaylists() == false）
+    Q_INVOKABLE void playlistAddSong(const QString &listid, const QString &songid,
+                                     int source = -1);
+    Q_INVOKABLE void playlistRemoveSong(const QString &listid, const QString &songid,
+                                        int source = -1);
+    Q_INVOKABLE void playlistCreate(const QString &name, int source = -1);
+    Q_INVOKABLE bool canWritePlaylists(int source = -1) const;
+
     Q_INVOKABLE bool playSong(const QVariantMap &song, int source = -1);
     Q_INVOKABLE bool downloadSong(const QVariantMap &song, int source = -1);
 
@@ -213,6 +221,8 @@ signals:
     void urlplay(const QString &playurl, const QString &title, const QString &artist,
                  const QString &cover, const QString &solve, const QString &hash, int source);
     void warned(const QString &text, int type);
+    // 歌单写入结果（action 为 playlistAddSong / playlistRemoveSong / playlistCreate）
+    void actionFinished(const QString &action, bool ok, const QString &message);
     void playUrlReady(const QString &hash, const QString &url, const QString &title,
                       const QString &artist, const QString &cover, int duration, int source);
     void playFailed(const QString &hash, int source);

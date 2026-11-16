@@ -101,6 +101,14 @@ protected:
     virtual void onFollowedArtists(int page, int pageSize)
     { Q_UNUSED(page) Q_UNUSED(pageSize) unsupported(ApiAction::FollowedArtists); }
 
+    // 平台歌单写入：默认不支持，支持的平台自己 override
+    virtual void onPlaylistAddSong(const QString &listid, const QString &songid)
+    { Q_UNUSED(listid) Q_UNUSED(songid) unsupported(ApiAction::PlaylistAddSong); }
+    virtual void onPlaylistRemoveSong(const QString &listid, const QString &songid)
+    { Q_UNUSED(listid) Q_UNUSED(songid) unsupported(ApiAction::PlaylistRemoveSong); }
+    virtual void onPlaylistCreate(const QString &name)
+    { Q_UNUSED(name) unsupported(ApiAction::PlaylistCreate); }
+
     void deliver(const QString &action, const QVariant &data, int source);
     void deliverError(const QString &action, int source, int code,
                       const QString &message = QString());

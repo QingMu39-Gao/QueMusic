@@ -63,6 +63,12 @@ void MusicSource::request(int sourceId, const QString &action, const QVariantMap
         onUserFavoriteSongs(argInt(ApiArg::Page, 1), argInt(ApiArg::PageSize, 20));
     else if (action == ApiAction::FollowedArtists)
         onFollowedArtists(argInt(ApiArg::Page, 1), argInt(ApiArg::PageSize, 20));
+    else if (action == ApiAction::PlaylistAddSong)
+        onPlaylistAddSong(argStr(ApiArg::ListId), argStr(ApiArg::Hash));
+    else if (action == ApiAction::PlaylistRemoveSong)
+        onPlaylistRemoveSong(argStr(ApiArg::ListId), argStr(ApiArg::Hash));
+    else if (action == ApiAction::PlaylistCreate)
+        onPlaylistCreate(argStr(ApiArg::Keyword));
     else
         deliverError(action, m_sourceId, -1, "unsupported action");
 }

@@ -115,6 +115,13 @@ bool ApiResultRouter::route(const QString &action, const QVariant &data, int sou
         m_models.userFavoriteSongs->append(failed ? QVariantList() : songList(info));
     } else if (action == ApiAction::FollowedArtists) {
         m_models.followedArtists->append(failed ? QVariantList() : ApiCommon::normalizeList(info));
+    } else if (ApiAction::isPlaylistWriteAction(action)) {
+        const bool ok = !failed && message.value("ok").toBool();
+        const QString text = message.value("message").toString();
+        emit actionFinished(action, ok,
+                            text.isEmpty() ? (ok ? QStringLiteral("操作成功")
+                                                : QStringLiteral("操作失败"))
+                                           : text);
     } else {
         return false;
     }

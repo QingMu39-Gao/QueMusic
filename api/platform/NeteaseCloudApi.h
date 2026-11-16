@@ -58,6 +58,9 @@ protected:
     void onUserPlaylists(int page, int pageSize) override;
     void onUserFavoriteSongs(int page, int pageSize) override;
     void onFollowedArtists(int page, int pageSize) override;
+    void onPlaylistAddSong(const QString &listid, const QString &songid) override;
+    void onPlaylistRemoveSong(const QString &listid, const QString &songid) override;
+    void onPlaylistCreate(const QString &name) override;
 
 signals:
     void setCookieRequest(const QString &cookie);
