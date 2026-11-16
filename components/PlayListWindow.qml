@@ -57,6 +57,64 @@ Item {
         animeOutList[animeType].running = true;
         Options.exitIndex -= 1;
     }
+
+    // 「播放」= 把整个歌单加进播放列表并从第一首开始播。
+    // 以前只播 get(0) 一首，看着就像"只加了最新的一首"。
+    // 大歌单一次最多取 playAllPageSize 首（网易云 playlist_track_all 的 limit），
+    // 拿到之后统一入队，避免只播到当前已加载的那一页。
+    property bool pendingPlayAll: false
+    readonly property int playAllPageSize: 1000
+
+    function playAll(): void {
+        if (!root.id) {
+            const first = MusicApi.playlistSong.get(0)
+            if (first && first.hash)
+                MusicApi.playSong(first)
+            return
+        }
+        root.pendingPlayAll = true
+        playAllTimeout.restart()
+        MusicApi.playlistSong.clear()
+        MusicApi.getPlaylistSongs(root.id, 1, root.playAllPageSize, root.songSource)
+    }
+
+    Timer {
+        id: playAllTimeout
+        interval: 15000
+        onTriggered: {
+            if (root.pendingPlayAll) {
+                root.pendingPlayAll = false
+                Options.warned("歌单读取超时，请稍后再试", 0)
+            }
+        }
+    }
+
+    Connections {
+        target: MusicApi.playlistSong
+        function onCountChanged(): void {
+            if (!root.pendingPlayAll || MusicApi.playlistSong.count === 0)
+                return
+            root.pendingPlayAll = false
+            playAllTimeout.stop()
+            const rows = []
+            for (let i = 0; i < MusicApi.playlistSong.count; ++i) {
+                const it = MusicApi.playlistSong.get(i)
+                if (it && it.hash)
+                    rows.push({ name: it.title, path: it.hash, songer: it.artist, source: root.songSource })
+            }
+            if (rows.length === 0) {
+                Options.warned("这个歌单没有可播放的歌曲", 0)
+                return
+            }
+            const added = Options.queue.appendBatch(rows)
+            if (added > 0) {
+                Playback.playIndex(Options.queue.count - added)
+                Options.warned("已加入播放列表 " + added + " 首", 1)
+            } else {
+                Options.warned("这些歌都已经在播放列表里了", 0)
+            }
+        }
+    }
     Connections {
         target: Options
         enabled: root.visible
@@ -351,12 +409,7 @@ Item {
                 buttonColor: Theme.themeColor
                 textColor: Theme.fullColor
                 iconColor: Theme.fullColor
-                onClicked: {
-                    const song = MusicApi.playlistSong.get(0);
-                    if (!song || !song.hash)
-                        return;   // 曲目还没加载出来：别拿 undefined 去请求
-                    MusicApi.playSong(song)
-                }
+                onClicked: root.playAll()
             }
             SButton {
                 width: 36

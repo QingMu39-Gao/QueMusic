@@ -183,6 +183,7 @@ Item {
                     color: Theme.containColor
                     border.width: 1
                     border.color: Theme.themeColor
+                    visible: !Config.hideBetaTip
                     Text {
                         id: warnIcon
                         x: 24
@@ -212,8 +213,8 @@ Item {
                         buttonColor: "transparent"
                         hoverColor: Theme.hoverColor
                         shadowEnabled: false
-                        tipText: "关闭提示"
-                        onClicked: parent.visible = false
+                        tipText: "关闭提示，不再显示"
+                        onClicked: Config.hideBetaTip = true
                     }
                 }
 
