@@ -479,8 +479,17 @@ private:
             info = parseArtists(data.value("data").toList());
         } else if (action == QLatin1String("playlistAddSong")
                    || action == QLatin1String("playlistRemoveSong")) {
-            // 这两个接口只回 { code }，没有列表；直接用 ok/message 给 QML
-            const int code = data.value("code", transportFailed ? -1 : 200).toInt();
+            // playlist_tracks 会把结果包成 { status, body } 一到两层，剥到含 code 的那层再判断
+            QVariantMap inner = data;
+            for (int i = 0; i < 2; ++i) {
+                if (inner.contains("code"))
+                    break;
+                const QVariantMap wrapped = inner.value("body").toMap();
+                if (wrapped.isEmpty())
+                    break;
+                inner = wrapped;
+            }
+            const int code = inner.value("code", transportFailed ? -1 : 200).toInt();
             const bool ok = !transportFailed && code == 200;
             const bool adding = action == QLatin1String("playlistAddSong");
             QString text;
@@ -655,17 +664,19 @@ void NeteaseCloudApi::onFollowedArtists(int page, int pageSize)
             {{"limit", pageSize}, {"offset", (page - 1) * pageSize}});
 }
 
-// 歌单写入：都需要登录态，未登录时服务层会先拦掉（isAccountAction）
+// 歌单写入：都需要登录态，未登录时服务层会先拦掉（isAccountAction）。
+// 注意曲目走 playlist_tracks（/api/playlist/manipulate/tracks，op=add/del）——
+// SDK 里的 playlist_track_add 是「收藏视频到视频歌单」的接口，用它加歌会被判 401。
 void NeteaseCloudApi::onPlaylistAddSong(const QString &listid, const QString &songid)
 {
-    enqueue(ApiAction::PlaylistAddSong, "playlist_track_add",
-            {{"pid", listid}, {"ids", songid}});
+    enqueue(ApiAction::PlaylistAddSong, "playlist_tracks",
+            {{"op", "add"}, {"pid", listid}, {"tracks", songid}});
 }
 
 void NeteaseCloudApi::onPlaylistRemoveSong(const QString &listid, const QString &songid)
 {
-    enqueue(ApiAction::PlaylistRemoveSong, "playlist_track_delete",
-            {{"pid", listid}, {"ids", songid}});
+    enqueue(ApiAction::PlaylistRemoveSong, "playlist_tracks",
+            {{"op", "del"}, {"pid", listid}, {"tracks", songid}});
 }
 
 void NeteaseCloudApi::onPlaylistCreate(const QString &name)
