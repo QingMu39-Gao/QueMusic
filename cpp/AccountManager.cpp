@@ -8,6 +8,9 @@
 #include "AppSettings.h"
 
 #include <QCoreApplication>
+#include <QDir>
+#include <QFile>
+#include <QStandardPaths>
 #include <QtConcurrent>
 #include <QDateTime>
 #include <QDebug>
@@ -51,7 +54,24 @@ AccountManager::AccountManager(QObject *parent)
     m_bilibiliPollTimer->setInterval(2500);
     connect(m_bilibiliPollTimer, &QTimer::timeout, this, &AccountManager::pollBilibili);
 
-    m_configPath = QCoreApplication::applicationDirPath() + QStringLiteral("/Account.ini");
+    // 账号 Cookie 放可写目录（%LOCALAPPDATA%\BroNekoX\QueMusic\Account.ini）。
+    // 老版本写在 exe 同目录：装进 Program Files 后那里不可写，登录态会丢，
+    // 所以这里做一次性迁移，旧文件还在就直接搬过来，省得重新扫码。
+    {
+        const QString configDir = QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation);
+        if (!configDir.isEmpty()) {
+            QDir().mkpath(configDir);
+            m_configPath = configDir + QStringLiteral("/Account.ini");
+        } else {
+            m_configPath = QCoreApplication::applicationDirPath() + QStringLiteral("/Account.ini");
+        }
+        const QString legacyPath =
+            QCoreApplication::applicationDirPath() + QStringLiteral("/Account.ini");
+        if (m_configPath != legacyPath && !QFile::exists(m_configPath) && QFile::exists(legacyPath)) {
+            if (QFile::copy(legacyPath, m_configPath))
+                qInfo() << "[account] 已迁移旧 Account.ini →" << m_configPath;
+        }
+    }
 
     loadPersisted();
 
